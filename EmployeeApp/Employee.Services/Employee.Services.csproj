@@ -4,4 +4,14 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="MassTransit.Extensions.DependencyInjection" Version="5.5.6" />
+    <PackageReference Include="MassTransit.RabbitMQ" Version="5.5.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Employee.Interfaces\Employee.Interfaces.csproj" />
+    <ProjectReference Include="..\Employee.SQL.Infrastructure\Employee.SQL.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>

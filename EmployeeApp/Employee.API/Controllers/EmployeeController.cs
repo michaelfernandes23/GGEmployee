@@ -1,13 +1,10 @@
 ﻿using Employee.Domain;
-using Employee.SQL.Infrastructure.Data;
-using Employee.SQL.Infrastructure.Repositories;
-using Microsoft.AspNetCore.Http;
+using Employee.Domain.Entities;
+using Employee.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Employee.API.Controllers
@@ -16,25 +13,25 @@ namespace Employee.API.Controllers
     [ApiController]
     public class EmployeesController : ControllerBase
     {
-        private readonly ServiceDbContext _context;
+        private readonly IEmployeeService _employeeService;
         private readonly IHubContext<BroadcastHub, IHubClient> _hubContext;
 
-        public EmployeesController(ServiceDbContext context, IHubContext<BroadcastHub, IHubClient> hubContext)
+        public EmployeesController(IEmployeeService employeeService, IHubContext<BroadcastHub, IHubClient> hubContext)
         {
-            _context = context;
+            _employeeService = employeeService;
             _hubContext = hubContext;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<User>>> GetEmployee()
         {
-            return await _context.User.ToListAsync();
+            return Ok(await _employeeService.GetAllEmployees());
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<User>> GetEmployee(string id)
         {
-            var employee = await _context.User.FindAsync(id);
+            var employee = await _employeeService.GetEmployeeInfoBasedOnId(id);
 
             if (employee == null)
             {
@@ -52,31 +49,16 @@ namespace Employee.API.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(employee).State = EntityState.Modified;
-
-            Notification notification = new Notification()
-            {
-                EmployeeName = employee.Name,
-                TransactionType = "Edit"
-            };
-            _context.Notification.Add(notification);
-
             try
             {
-                await _context.SaveChangesAsync();
-                await _hubContext.Clients.All.BroadcastMessage();
+                await _employeeService.UpdateEmployee(employee);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateException)
             {
-                if (!EmployeeExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                throw;
             }
+
+            await _hubContext.Clients.All.BroadcastMessage();
 
             return NoContent();
         }
@@ -84,33 +66,16 @@ namespace Employee.API.Controllers
         [HttpPost]
         public async Task<ActionResult<User>> PostEmployee(User employee)
         {
-            employee.Id = Guid.NewGuid().ToString();
-            _context.User.Add(employee);
-
-            //Createing Notification
-            Notification notification = new Notification()
-            {
-                EmployeeName = employee.Name,
-                TransactionType = "Add"
-            };
-            _context.Notification.Add(notification);
-
             try
             {
-                await _context.SaveChangesAsync();
-                await _hubContext.Clients.All.BroadcastMessage();
+                await _employeeService.CreateEmployee(employee);
             }
             catch (DbUpdateException)
             {
-                if (EmployeeExists(employee.Id))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
+                throw;
             }
+
+            await _hubContext.Clients.All.BroadcastMessage();
 
             return CreatedAtAction("GetEmployee", new { id = employee.Id }, employee);
         }
@@ -118,30 +83,10 @@ namespace Employee.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEmployee(string id)
         {
-            var employee = await _context.User.FindAsync(id);
-            if (employee == null)
-            {
-                return NotFound();
-            }
-
-            Notification notification = new Notification()
-            {
-                EmployeeName = employee.Name,
-                TransactionType = "Delete"
-            };
-
-            _context.User.Remove(employee);
-            _context.Notification.Add(notification);
-
-            await _context.SaveChangesAsync();
+            await _employeeService.DeleteEmployee(id);
             await _hubContext.Clients.All.BroadcastMessage();
 
             return NoContent();
-        }
-
-        private bool EmployeeExists(string id)
-        {
-            return _context.User.Any(e => e.Id == id);
         }
     }
 }

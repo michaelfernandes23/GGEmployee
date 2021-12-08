@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Employee.SQL.Infrastructure.Repositories;
+﻿using Employee.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Employee.SQL.Infrastructure.Data

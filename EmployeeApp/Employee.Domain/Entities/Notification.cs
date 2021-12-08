@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Text;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Employee.Domain.Entities
 {
@@ -9,7 +6,7 @@ namespace Employee.Domain.Entities
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
-        public string Username { get; set; }
-        public string TranType { get; set; }
+        public string EmployeeName { get; set; }
+        public string TransactionType { get; set; }
     }
 }

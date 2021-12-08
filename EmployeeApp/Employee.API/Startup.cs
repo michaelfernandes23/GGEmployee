@@ -1,3 +1,4 @@
+using Employee.API.DependencyConfig;
 using Employee.Domain;
 using Employee.SQL.Infrastructure.Data;
 using Microsoft.AspNetCore.Builder;
@@ -28,29 +29,36 @@ namespace Employee.API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllers();
-
-            services.AddSwaggerGen(c =>
+            try
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Employee API", Version = "v1" });
-            });
+                services.AddControllers();
 
-            services.AddCors(o => o.AddPolicy("CorsPolicy", builder => {
-                builder
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials()
-                .WithOrigins("http://localhost:4200");
-            }));
+                services.AddSwaggerGen(c =>
+                {
+                    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Employee API", Version = "v1" });
+                });
 
-            services.AddSignalR();
+                services.AddCors(c => c.AddPolicy("AllowAllOrigin", options => options.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials()));
 
-            var connectionString = Configuration.GetConnectionString("DB");
-            services.AddDbContext<ServiceDbContext>(options =>
+                services.AddDataServices();
+
+                services.AddServiceBus(Configuration);
+                services.AddSignalR();
+
+                var connectionString = Configuration.GetConnectionString("DB");
+                services.AddDbContext<ServiceDbContext>(options =>
+                {
+                    options.EnableSensitiveDataLogging();
+                    options.UseSqlServer(connectionString, sqlServerOptions => sqlServerOptions.CommandTimeout(90));
+                });
+            }
+            catch (Exception)
             {
-                options.EnableSensitiveDataLogging();
-                options.UseSqlServer(connectionString, sqlServerOptions => sqlServerOptions.CommandTimeout(90));
-            });
+            }
+           
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
